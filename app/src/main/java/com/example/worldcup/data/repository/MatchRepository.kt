@@ -87,6 +87,8 @@ class MatchRepository(
             else                        -> return  // SCHEDULED/TIMED — nothing to update
         }
 
+        Log.d(TAG, "updateMatchInDb: ${dto.homeTeam.name} vs ${dto.awayTeam.name} | status=${dto.status} | minute=${dto.minute}")
+
         matchDao.updateScore(
             matchId   = entity.id,
             homeScore = dto.score.fullTime.home ?: 0,

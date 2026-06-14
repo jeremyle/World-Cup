@@ -1,9 +1,12 @@
 package com.example.worldcup.ui.screens.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -60,7 +63,7 @@ fun MatchCard(
         ) {
             // Status chip: live minute, FT, or kickoff label
             val statusText = when (match.status) {
-                Status.LIVE      -> "🔴 ${match.minute}'"
+                Status.LIVE      -> if (match.minute != null) "🔴 ${match.minute}'" else "🔴 LIVE"
                 Status.COMPLETED -> "FT"
                 Status.UPCOMING  -> "Upcoming"
             }
@@ -76,58 +79,76 @@ fun MatchCard(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Teams and score / kickoff time
+            // IntrinsicSize.Max makes all children the same height so the
+            // center Box can fillMaxHeight() and vertically center its content.
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Max),
                 horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top,
             ) {
-                // Home team
+                // Home team — flag always at top, name always 2 lines
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(text = countryCodeToFlagEmoji(match.homeTeam.flag), fontSize = 36.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = match.homeTeam.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        minLines = 2,
+                        maxLines = 2,
                     )
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-                // Center: score for live/finished, kickoff time for upcoming
-                when (match.status) {
-                    Status.UPCOMING -> Text(
-                        text = formatKickoffTime(match),
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Status.LIVE, Status.COMPLETED -> Text(
-                        text = "${match.homeTeamScore}  –  ${match.awayTeamScore}",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                // Center: fixed width so team columns always get equal space.
+                // fillMaxHeight + Alignment.Center vertically centers the text.
+                Box(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .fillMaxHeight(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    when (match.status) {
+                        Status.UPCOMING -> Text(
+                            text = formatKickoffTime(match),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
+                        Status.LIVE, Status.COMPLETED -> Text(
+                            text = "${match.homeTeamScore} – ${match.awayTeamScore}",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Away team
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 ) {
                     Text(text = countryCodeToFlagEmoji(match.awayTeam.flag), fontSize = 36.sp)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = match.awayTeam.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
+                        textAlign = TextAlign.Center,
+                        minLines = 2,
+                        maxLines = 2,
                     )
                 }
             }
