@@ -79,6 +79,14 @@ interface MatchDao {
     suspend fun findMatchByApproxKickoff(kickoffMs: Long): MatchEntity?
 
     /**
+     * Completed matches for a group as a Flow — used for reactive standings computation.
+     * Emits a new list whenever any match result in the group changes.
+     */
+    @Transaction
+    @Query("SELECT * FROM matches WHERE groupId = :groupId AND status = 'COMPLETED' ORDER BY kickoffTimeMs ASC")
+    fun getCompletedMatchesForGroup(groupId: String): Flow<List<MatchWithTeams>>
+
+    /**
      * Returns matches on a given day that kicked off before [cutoffMs] and are
      * still not COMPLETED. A non-empty result means a finished-matches API call
      * is warranted.

@@ -37,6 +37,7 @@ data class MatchWithTeams(
 
 fun MatchWithTeams.toDomain(): Match = Match(
     id = match.id,
+    groupId = match.groupId,
     homeTeam = Team(id = homeTeam.id, name = homeTeam.name, flag = homeTeam.countryCode),
     awayTeam = Team(id = awayTeam.id, name = awayTeam.name, flag = awayTeam.countryCode),
     stadium = Stadium(

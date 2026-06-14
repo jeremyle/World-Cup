@@ -4,6 +4,7 @@ import kotlinx.datetime.Instant
 
 data class Match(
     val id: String,
+    val groupId: String?,       // null for knockout rounds
     val homeTeam: Team,
     val awayTeam: Team,
     val stadium: Stadium,

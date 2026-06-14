@@ -6,11 +6,15 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.worldcup.data.local.database.WorldCupDatabase
 import com.example.worldcup.data.local.entity.toDomain
+import com.example.worldcup.data.model.GroupStanding
 import com.example.worldcup.data.model.Match
+import com.example.worldcup.data.repository.GroupRepository
 import com.example.worldcup.data.repository.MatchRepository
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
@@ -27,8 +31,12 @@ private const val LIVE_POLL_INTERVAL_MS = 60_000L
 
 class HomeScreenViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val db         = WorldCupDatabase.getInstance(app)
-    private val repository = MatchRepository(db.matchDao())
+    private val db              = WorldCupDatabase.getInstance(app)
+    private val repository      = MatchRepository(db.matchDao())
+    private val groupRepository = GroupRepository(db.teamDao(), db.matchDao())
+
+    fun getGroupStandings(groupId: String): Flow<List<GroupStanding>> =
+        groupRepository.getGroupStandings(groupId)
 
     val todaysMatches: StateFlow<List<Match>> = run {
         val zone    = TimeZone.currentSystemDefault()
