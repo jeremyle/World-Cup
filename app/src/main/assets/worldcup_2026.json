@@ -92,7 +92,7 @@
     { "id": "C_M6", "phase": "GROUP", "groupId": "C", "matchday": 3, "homeTeamId": "MAR", "awayTeamId": "HAI", "stadiumId": "mercedes_benz_stadium",   "kickoffTime": "2026-06-24T22:00:00Z" },
 
     { "id": "D_M1", "phase": "GROUP", "groupId": "D", "matchday": 1, "homeTeamId": "USA", "awayTeamId": "PAR", "stadiumId": "sofi_stadium",            "kickoffTime": "2026-06-13T01:00:00Z" },
-    { "id": "D_M2", "phase": "GROUP", "groupId": "D", "matchday": 1, "homeTeamId": "AUS", "awayTeamId": "TUR", "stadiumId": "bc_place",                "kickoffTime": "2026-06-13T04:00:00Z" },
+    { "id": "D_M2", "phase": "GROUP", "groupId": "D", "matchday": 1, "homeTeamId": "AUS", "awayTeamId": "TUR", "stadiumId": "bc_place",                "kickoffTime": "2026-06-14T04:00:00Z" },
     { "id": "D_M3", "phase": "GROUP", "groupId": "D", "matchday": 2, "homeTeamId": "USA", "awayTeamId": "AUS", "stadiumId": "lumen_field",             "kickoffTime": "2026-06-19T19:00:00Z" },
     { "id": "D_M4", "phase": "GROUP", "groupId": "D", "matchday": 2, "homeTeamId": "TUR", "awayTeamId": "PAR", "stadiumId": "levis_stadium",           "kickoffTime": "2026-06-20T03:00:00Z" },
     { "id": "D_M5", "phase": "GROUP", "groupId": "D", "matchday": 3, "homeTeamId": "TUR", "awayTeamId": "USA", "stadiumId": "sofi_stadium",            "kickoffTime": "2026-06-26T02:00:00Z" },

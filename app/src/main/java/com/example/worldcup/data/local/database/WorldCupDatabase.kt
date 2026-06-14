@@ -17,7 +17,7 @@ import com.example.worldcup.data.local.entity.TeamEntity
         StadiumEntity::class,
         MatchEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class WorldCupDatabase : RoomDatabase() {
@@ -35,7 +35,9 @@ abstract class WorldCupDatabase : RoomDatabase() {
                     context.applicationContext,
                     WorldCupDatabase::class.java,
                     "worldcup.db"
-                ).build().also { INSTANCE = it }
+                )
+                .fallbackToDestructiveMigration(true)
+                .build().also { INSTANCE = it }
             }
     }
 }
