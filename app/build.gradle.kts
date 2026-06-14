@@ -5,6 +5,13 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+import java.util.Properties
+
+val localProps = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
+}
+
 android {
     namespace = "com.example.worldcup"
     compileSdk {
@@ -21,6 +28,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "FOOTBALL_DATA_API_KEY",
+            "\"${localProps.getProperty("FOOTBALL_DATA_API_KEY", "")}\""
+        )
     }
 
     buildTypes {
@@ -38,6 +51,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -65,6 +79,11 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+
+    // Networking
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.kotlinx.serialization)
+    implementation(libs.okhttp.logging)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -24,7 +24,7 @@ interface MatchDao {
     @Query("SELECT * FROM matches ORDER BY kickoffTimeMs ASC")
     fun getAllMatchesWithTeams(): Flow<List<MatchWithTeams>>
 
-    // Matches on a specific UTC day (pass start/end of day as epoch ms)
+    // Matches on a specific local day (pass start/end of day as epoch ms)
     @Transaction
     @Query("""
         SELECT * FROM matches
@@ -60,4 +60,39 @@ interface MatchDao {
 
     @Query("SELECT COUNT(*) FROM matches")
     suspend fun count(): Int
+
+    // ── API match-lookup queries ────────────────────────────────────────────
+
+    /**
+     * Primary lookup: exact kickoff time + home team ID (TLA).
+     * Correctly disambiguates simultaneous matches (e.g. group stage matchday 3).
+     */
+    @Query("SELECT * FROM matches WHERE kickoffTimeMs = :kickoffMs AND homeTeamId = :homeTeamTla LIMIT 1")
+    suspend fun findMatchByKickoffAndTeam(kickoffMs: Long, homeTeamTla: String): MatchEntity?
+
+    /**
+     * Fallback: match within ±3 minutes.
+     * Catches cases where the API's kickoff time is slightly off from our seed data,
+     * or where TLA codes differ (e.g. football-data.org uses "RSA", we use "ZAF").
+     */
+    @Query("SELECT * FROM matches WHERE ABS(kickoffTimeMs - :kickoffMs) <= 180000 LIMIT 1")
+    suspend fun findMatchByApproxKickoff(kickoffMs: Long): MatchEntity?
+
+    /**
+     * Returns matches on a given day that kicked off before [cutoffMs] and are
+     * still not COMPLETED. A non-empty result means a finished-matches API call
+     * is warranted.
+     */
+    @Query("""
+        SELECT * FROM matches
+        WHERE kickoffTimeMs >= :startOfDayMs
+          AND kickoffTimeMs < :endOfDayMs
+          AND kickoffTimeMs <= :cutoffMs
+          AND status != 'COMPLETED'
+    """)
+    suspend fun getMatchesNeedingFinishedUpdate(
+        startOfDayMs: Long,
+        endOfDayMs: Long,
+        cutoffMs: Long,
+    ): List<MatchEntity>
 }
