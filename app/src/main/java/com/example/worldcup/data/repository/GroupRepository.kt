@@ -10,77 +10,95 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 class GroupRepository(
-    private val teamDao: TeamDao,
     private val matchDao: MatchDao,
+    private val teamDao: TeamDao,
 ) {
     /**
-     * Returns a reactive [Flow] of sorted standings for [groupId].
-     * Recomputes automatically whenever a match result is written to the DB
-     * (e.g. after a live score poll or a finished-match fetch).
+     * Returns a reactive [Flow] of standings for [groupId], computed locally from
+     * match results stored in the DB.
      *
-     * Sort order: points ↓ → goal difference ↓ → team name ↑
+     * Standing points are calculated from COMPLETED and LIVE matches:
+     *   Win  → 3 pts, Loss → 0 pts, Draw → 1 pt each
+     * Teams with no played matches appear at the bottom with zeroed stats.
+     *
+     * The flow re-emits automatically whenever any match score or status changes,
+     * so live standings update in real time without an extra API call.
+     *
+     * Sort order: Pts desc → GD desc → GF desc → Name asc (FIFA tiebreakers, simplified).
      */
     fun getGroupStandings(groupId: String): Flow<List<GroupStanding>> =
         combine(
+            matchDao.getPlayedMatchesForGroup(groupId),
             teamDao.getTeamsByGroup(groupId),
-            matchDao.getCompletedMatchesForGroup(groupId),
-        ) { teams, completedMatches ->
-            computeStandings(teams, completedMatches)
+        ) { matches, teams ->
+            computeStandings(matches, teams)
         }
 
     // ── Computation ─────────────────────────────────────────────────────────
 
     private fun computeStandings(
-        teams: List<TeamEntity>,
         matches: List<MatchWithTeams>,
+        teams: List<TeamEntity>,
     ): List<GroupStanding> {
-        // Mutable record: teamId → [wins, draws, losses, goalsFor, goalsAgainst]
-        val records = teams.associate { it.id to IntArray(5) }.toMutableMap()
+        // Initialise a stats entry for every team in the group (even those with 0 matches)
+        val stats = LinkedHashMap<String, Stats>()
+        teams.forEach { stats[it.id] = Stats(it) }
 
-        for (m in matches) {
-            val hId = m.homeTeam.id
-            val aId = m.awayTeam.id
-            val hScore = m.match.homeScore
-            val aScore = m.match.awayScore
+        for (mwt in matches) {
+            val homeId = mwt.match.homeTeamId
+            val awayId = mwt.match.awayTeamId
+            val h      = mwt.match.homeScore
+            val a      = mwt.match.awayScore
 
-            val h = records[hId] ?: continue
-            val a = records[aId] ?: continue
+            val homeStats = stats[homeId] ?: continue
+            val awayStats = stats[awayId] ?: continue
 
-            h[3] += hScore; h[4] += aScore   // home GF / GA
-            a[3] += aScore; a[4] += hScore   // away GF / GA
+            homeStats.played++
+            awayStats.played++
+            homeStats.goalsFor      += h
+            homeStats.goalsAgainst  += a
+            awayStats.goalsFor      += a
+            awayStats.goalsAgainst  += h
 
             when {
-                hScore > aScore -> { h[0]++; a[2]++ }  // home win
-                hScore < aScore -> { a[0]++; h[2]++ }  // away win
-                else            -> { h[1]++; a[1]++ }  // draw
+                h > a -> { homeStats.won++;  awayStats.lost++ }
+                h < a -> { awayStats.won++;  homeStats.lost++ }
+                else  -> { homeStats.drawn++; awayStats.drawn++ }
             }
         }
 
-        val teamById = teams.associateBy { it.id }
-
-        return records.entries
-            .mapNotNull { (id, r) ->
-                val entity = teamById[id] ?: return@mapNotNull null
-                val won = r[0]; val drawn = r[1]; val lost = r[2]
-                val gf  = r[3]; val ga   = r[4]
-                GroupStanding(
-                    position       = 0,   // assigned after sorting
-                    team           = Team(id = entity.id, name = entity.name, flag = entity.countryCode),
-                    played         = won + drawn + lost,
-                    won            = won,
-                    drawn          = drawn,
-                    lost           = lost,
-                    goalsFor       = gf,
-                    goalsAgainst   = ga,
-                    goalDifference = gf - ga,
-                    points         = won * 3 + drawn,
-                )
-            }
+        return stats.values
             .sortedWith(
-                compareByDescending<GroupStanding> { it.points }
+                compareByDescending<Stats> { it.points }
                     .thenByDescending { it.goalDifference }
+                    .thenByDescending { it.goalsFor }
                     .thenBy { it.team.name }
             )
-            .mapIndexed { index, standing -> standing.copy(position = index + 1) }
+            .mapIndexed { index, s ->
+                GroupStanding(
+                    position       = index + 1,
+                    team           = Team(id = s.team.id, name = s.team.name, flag = s.team.countryCode),
+                    played         = s.played,
+                    won            = s.won,
+                    drawn          = s.drawn,
+                    lost           = s.lost,
+                    goalsFor       = s.goalsFor,
+                    goalsAgainst   = s.goalsAgainst,
+                    goalDifference = s.goalDifference,
+                    points         = s.points,
+                )
+            }
+    }
+
+    private class Stats(val team: TeamEntity) {
+        var played       = 0
+        var won          = 0
+        var drawn        = 0
+        var lost         = 0
+        var goalsFor     = 0
+        var goalsAgainst = 0
+
+        val goalDifference get() = goalsFor - goalsAgainst
+        val points         get() = won * 3 + drawn
     }
 }

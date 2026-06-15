@@ -72,35 +72,35 @@ interface MatchDao {
 
     /**
      * Fallback: match within ±3 minutes.
-     * Catches cases where the API's kickoff time is slightly off from our seed data,
-     * or where TLA codes differ (e.g. football-data.org uses "RSA", we use "ZAF").
+     * Catches cases where the API's kickoff time is slightly off from our seed data.
      */
     @Query("SELECT * FROM matches WHERE ABS(kickoffTimeMs - :kickoffMs) <= 180000 LIMIT 1")
     suspend fun findMatchByApproxKickoff(kickoffMs: Long): MatchEntity?
 
     /**
-     * Completed matches for a group as a Flow — used for reactive standings computation.
-     * Emits a new list whenever any match result in the group changes.
+     * COMPLETED + LIVE matches for a group — used for reactive standings computation.
+     * Emits a new list whenever any match result or status changes.
+     * Including LIVE lets standings reflect the current score in real time.
      */
     @Transaction
-    @Query("SELECT * FROM matches WHERE groupId = :groupId AND status = 'COMPLETED' ORDER BY kickoffTimeMs ASC")
-    fun getCompletedMatchesForGroup(groupId: String): Flow<List<MatchWithTeams>>
-
-    /**
-     * Returns matches on a given day that kicked off before [cutoffMs] and are
-     * still not COMPLETED. A non-empty result means a finished-matches API call
-     * is warranted.
-     */
     @Query("""
         SELECT * FROM matches
-        WHERE kickoffTimeMs >= :startOfDayMs
-          AND kickoffTimeMs < :endOfDayMs
-          AND kickoffTimeMs <= :cutoffMs
-          AND status != 'COMPLETED'
+        WHERE groupId = :groupId
+          AND status IN ('COMPLETED', 'LIVE')
+        ORDER BY kickoffTimeMs ASC
     """)
-    suspend fun getMatchesNeedingFinishedUpdate(
-        startOfDayMs: Long,
-        endOfDayMs: Long,
-        cutoffMs: Long,
-    ): List<MatchEntity>
+    fun getPlayedMatchesForGroup(groupId: String): Flow<List<MatchWithTeams>>
+
+    /** Count of currently LIVE matches in [groupId]. Used to decide whether to keep polling. */
+    @Query("SELECT COUNT(*) FROM matches WHERE groupId = :groupId AND status = 'LIVE'")
+    suspend fun countLiveMatchesInGroup(groupId: String): Int
+
+    /**
+     * All past matches (kicked off > 110 min ago) not yet marked COMPLETED.
+     * Non-empty result → a bulk FINISHED fetch from the API is warranted.
+     * LIVE matches are included so a match stuck in LIVE from a prior session
+     * gets updated if the server now reports it as FINISHED.
+     */
+    @Query("SELECT * FROM matches WHERE kickoffTimeMs <= :cutoffMs AND status != 'COMPLETED'")
+    suspend fun getPendingFinishedMatches(cutoffMs: Long): List<MatchEntity>
 }

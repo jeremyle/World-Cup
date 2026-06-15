@@ -1,13 +1,17 @@
 package com.example.worldcup.ui.screens.groups
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -61,34 +65,50 @@ fun GroupCard(
 
             HorizontalDivider()
 
-            // ── Header row ──────────────────────────────────────────────────
-            StandingsRow(
-                position   = "#",
-                teamLabel  = "Team",
-                mp = "MP", w = "W", d = "D", l = "L",
-                gf = "GF", ga = "GA", gd = "GD", pts = "Pts",
-                isHeader   = true,
-            )
-
-            HorizontalDivider()
-
-            // ── Data rows ───────────────────────────────────────────────────
-            standings.forEachIndexed { index, s ->
+            if (standings.isEmpty()) {
+                // Placeholder while standings are loading or unavailable
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+            } else {
+                // ── Header row ──────────────────────────────────────────────
                 StandingsRow(
-                    position  = s.position.toString(),
-                    teamLabel = "${countryCodeToFlagEmoji(s.team.flag)}  ${s.team.name}",
-                    mp  = s.played.toString(),
-                    w   = s.won.toString(),
-                    d   = s.drawn.toString(),
-                    l   = s.lost.toString(),
-                    gf  = s.goalsFor.toString(),
-                    ga  = s.goalsAgainst.toString(),
-                    gd  = formatGd(s.goalDifference),
-                    pts = s.points.toString(),
-                    gdColor = gdColor(s.goalDifference),
-                    ptsWeight = FontWeight.Bold,
+                    position   = "#",
+                    teamLabel  = "Team",
+                    mp = "MP", w = "W", d = "D", l = "L",
+                    gf = "GF", ga = "GA", gd = "GD", pts = "Pts",
+                    isHeader   = true,
                 )
-                if (index < standings.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                HorizontalDivider()
+
+                // ── Data rows ───────────────────────────────────────────────
+                standings.forEachIndexed { index, s ->
+                    StandingsRow(
+                        position  = s.position.toString(),
+                        teamLabel = "${countryCodeToFlagEmoji(s.team.flag)}  ${s.team.name}",
+                        mp  = s.played.toString(),
+                        w   = s.won.toString(),
+                        d   = s.drawn.toString(),
+                        l   = s.lost.toString(),
+                        gf  = s.goalsFor.toString(),
+                        ga  = s.goalsAgainst.toString(),
+                        gd  = formatGd(s.goalDifference),
+                        pts = s.points.toString(),
+                        gdColor = gdColor(s.goalDifference),
+                        ptsWeight = FontWeight.Bold,
+                    )
+                    if (index < standings.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                }
             }
         }
     }
@@ -115,11 +135,9 @@ private fun StandingsRow(
             .padding(horizontal = 12.dp, vertical = if (isHeader) 6.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Position
         Cell(position, W_POS, color = textColor, align = TextAlign.Center)
         Spacer(Modifier.width(6.dp))
 
-        // Team name (flexible)
         Text(
             text = teamLabel,
             modifier = Modifier.weight(1f),
@@ -169,7 +187,7 @@ private fun formatGd(gd: Int): String = when {
 
 @Composable
 private fun gdColor(gd: Int): Color = when {
-    gd > 0  -> Color(0xFF2E7D32)   // green
+    gd > 0  -> Color(0xFF2E7D32)
     gd < 0  -> MaterialTheme.colorScheme.error
     else    -> MaterialTheme.colorScheme.onSurfaceVariant
 }

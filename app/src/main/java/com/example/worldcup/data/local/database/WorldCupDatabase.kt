@@ -17,7 +17,7 @@ import com.example.worldcup.data.local.entity.TeamEntity
         StadiumEntity::class,
         MatchEntity::class,
     ],
-    version = 2,
+    version = 6,
     exportSchema = false
 )
 abstract class WorldCupDatabase : RoomDatabase() {

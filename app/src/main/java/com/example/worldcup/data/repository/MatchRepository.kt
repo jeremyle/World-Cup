@@ -6,12 +6,9 @@ import com.example.worldcup.data.remote.FootballDataApi
 import com.example.worldcup.data.remote.FootballDataApiClient
 import com.example.worldcup.data.remote.dto.MatchDto
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.Instant
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.atStartOfDayIn
-import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 
 class MatchRepository(
     private val matchDao: MatchDao,
@@ -19,43 +16,39 @@ class MatchRepository(
 ) {
 
     /**
-     * Fetch FINISHED matches for [date] from the API and persist to DB.
+     * Fetches all FINISHED World Cup matches from the tournament start date up to today
+     * and persists them to the DB.
      *
-     * Caching logic:
-     *  - We check if any match on [date] kicked off more than 110 minutes ago
-     *    and is still not COMPLETED in DB.
-     *  - If none → all done matches are already cached, skip the API call.
-     *  - If some → fetch from API, update DB. Next time this runs for the same
-     *    day those matches will be COMPLETED and the check returns empty again.
-     *
-     * This means a day's finished results are fetched at most once total, ever.
+     * Skips the API call entirely if there are no past matches still waiting for a final
+     * score — i.e., every match that should be done is already COMPLETED in the DB.
+     * This makes finished-match data a permanent cache: once a score is stored it is
+     * never re-fetched, but a 0-0 COMPLETED result is correctly preserved (status
+     * distinguishes it from an unplayed UPCOMING match).
      */
-    suspend fun refreshFinishedMatches(date: LocalDate) {
-        val zone = TimeZone.currentSystemDefault()
-        val startMs = date.atStartOfDayIn(zone).toEpochMilliseconds()
-        val endMs   = date.plus(1, DateTimeUnit.DAY).atStartOfDayIn(zone).toEpochMilliseconds()
-        // A match is considered "should be finished" if it kicked off 110+ min ago
+    suspend fun refreshAllFinishedMatches() {
         val cutoffMs = Clock.System.now().toEpochMilliseconds() - 110L * 60 * 1000
+        val pending  = matchDao.getPendingFinishedMatches(cutoffMs)
 
-        val pending = matchDao.getMatchesNeedingFinishedUpdate(startMs, endMs, cutoffMs)
         if (pending.isEmpty()) {
-            Log.d(TAG, "refreshFinishedMatches: all done for $date, skipping API")
+            Log.d(TAG, "refreshAllFinishedMatches: nothing pending, skipping API")
             return
         }
 
-        Log.d(TAG, "refreshFinishedMatches: fetching ${pending.size} potentially finished matches for $date")
+        Log.d(TAG, "refreshAllFinishedMatches: ${pending.size} pending match(es), fetching from API")
+        val today    = Clock.System.todayIn(TimeZone.UTC).toString()
         val response = api.getMatches(
             status   = "FINISHED",
-            dateFrom = date.toString(),
-            dateTo   = date.toString(),
+            dateFrom = WC_START_DATE,
+            dateTo   = today,
         )
         response.matches.forEach { updateMatchInDb(it) }
-        Log.d(TAG, "refreshFinishedMatches: updated ${response.matches.size} finished matches")
+        Log.d(TAG, "refreshAllFinishedMatches: processed ${response.matches.size} finished match(es)")
     }
 
     /**
-     * Fetch all currently LIVE matches and update the DB.
-     * Call this on a 60-second polling schedule while any match is in progress.
+     * Fetches all currently LIVE matches from the API and updates the DB.
+     * The Room Flow on [MatchDao.getPlayedMatchesForGroup] will re-emit automatically
+     * when any row changes, triggering a standings recomputation in [GroupRepository].
      */
     suspend fun refreshLiveMatches() {
         val response = api.getMatches(status = "LIVE")
@@ -66,39 +59,46 @@ class MatchRepository(
 
     // ── Private helpers ─────────────────────────────────────────────────────
 
+    /**
+     * Looks up the local DB entity for [dto], compares score/status,
+     * and only writes to DB if something actually changed.
+     */
     private suspend fun updateMatchInDb(dto: MatchDto) {
         val kickoffMs = Instant.parse(dto.utcDate).toEpochMilliseconds()
         val tla       = dto.homeTeam.tla
 
-        // 1. Try exact kickoff + TLA (handles simultaneous matches correctly)
-        // 2. Fallback: approximate kickoff window (handles TLA mismatches like RSA vs ZAF)
         val entity =
             (if (tla != null) matchDao.findMatchByKickoffAndTeam(kickoffMs, tla) else null)
                 ?: matchDao.findMatchByApproxKickoff(kickoffMs)
 
         if (entity == null) {
-            Log.w(TAG, "updateMatchInDb: no local match for ${dto.homeTeam.name} vs ${dto.awayTeam.name} at ${dto.utcDate}")
+            Log.w(TAG, "No local match for ${dto.homeTeam.name} vs ${dto.awayTeam.name} at ${dto.utcDate}")
             return
         }
 
         val newStatus = when (dto.status) {
             "IN_PLAY", "LIVE", "PAUSED" -> "LIVE"
             "FINISHED"                  -> "COMPLETED"
-            else                        -> return  // SCHEDULED/TIMED — nothing to update
+            else                        -> return
         }
 
-        Log.d(TAG, "updateMatchInDb: ${dto.homeTeam.name} vs ${dto.awayTeam.name} | status=${dto.status} | minute=${dto.minute}")
+        val newHome = dto.score.fullTime.home ?: 0
+        val newAway = dto.score.fullTime.away ?: 0
 
-        matchDao.updateScore(
-            matchId   = entity.id,
-            homeScore = dto.score.fullTime.home ?: 0,
-            awayScore = dto.score.fullTime.away ?: 0,
-            status    = newStatus,
-            minute    = dto.minute,
-        )
+        // Skip DB write if nothing changed — avoids spurious Room Flow emissions
+        if (entity.status    == newStatus &&
+            entity.homeScore == newHome   &&
+            entity.awayScore == newAway   &&
+            entity.minute    == dto.minute) {
+            return
+        }
+
+        Log.d(TAG, "updateMatchInDb: ${dto.homeTeam.name} $newHome–$newAway ${dto.awayTeam.name} [$newStatus]")
+        matchDao.updateScore(entity.id, newHome, newAway, newStatus, dto.minute)
     }
 
     companion object {
-        private const val TAG = "MatchRepository"
+        private const val TAG           = "MatchRepository"
+        private const val WC_START_DATE = "2026-06-11"
     }
 }

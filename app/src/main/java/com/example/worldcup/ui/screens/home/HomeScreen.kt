@@ -15,6 +15,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -40,6 +41,11 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
 
     // Derive the group of whichever match card is currently visible
     val currentGroupId = matches.getOrNull(pagerState.currentPage)?.groupId
+
+    // Notify the ViewModel when the visible group changes so it can start/stop polling
+    LaunchedEffect(currentGroupId) {
+        viewModel.onGroupSelected(currentGroupId)
+    }
 
     // Reactively collect standings for the current group; switches automatically on swipe
     val groupStandings by produceState<List<GroupStanding>>(
@@ -105,8 +111,9 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
                     }
                 }
 
-                // Group standings card — updates as you swipe between matches
-                if (currentGroupId != null && groupStandings.isNotEmpty()) {
+                // Always show the GroupCard when a group is selected.
+                // GroupCard itself handles the loading/empty state.
+                if (currentGroupId != null) {
                     Spacer(modifier = Modifier.height(20.dp))
                     GroupCard(
                         groupId = currentGroupId,

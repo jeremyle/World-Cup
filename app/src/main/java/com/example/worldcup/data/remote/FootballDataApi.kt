@@ -10,7 +10,7 @@ interface FootballDataApi {
      * Fetch World Cup matches with optional filters.
      *
      * Examples:
-     *   status=FINISHED, dateFrom=2026-06-13, dateTo=2026-06-13  → finished matches on a day
+     *   status=FINISHED, dateFrom=2026-06-11, dateTo=2026-06-14  → all finished matches in range
      *   status=LIVE                                               → all currently live matches
      */
     @GET("competitions/WC/matches")
