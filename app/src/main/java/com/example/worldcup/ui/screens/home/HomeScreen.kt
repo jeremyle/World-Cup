@@ -36,6 +36,7 @@ import kotlinx.datetime.todayIn
 @Composable
 fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
     val matches by viewModel.todaysMatches.collectAsState()
+    val qualifyingThirdPlaceIds by viewModel.qualifyingThirdPlaceIds.collectAsState()
     val pagerState = rememberPagerState(pageCount = { matches.size })
     val selectedDate = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
 
@@ -118,6 +119,7 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
                     GroupCard(
                         groupId = currentGroupId,
                         standings = groupStandings,
+                        qualifyingThirdPlaceIds = qualifyingThirdPlaceIds,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                     Spacer(modifier = Modifier.height(16.dp))

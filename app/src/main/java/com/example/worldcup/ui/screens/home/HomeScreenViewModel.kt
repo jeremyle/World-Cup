@@ -55,6 +55,19 @@ class HomeScreenViewModel(app: Application) : AndroidViewModel(app) {
     fun getGroupStandings(groupId: String): Flow<List<GroupStanding>> =
         groupRepository.getGroupStandings(groupId)
 
+    /**
+     * The 8 best third-place team IDs that qualify for the knockout phase,
+     * ranked by official FIFA WC 2026 third-place criteria.
+     * Updates reactively whenever any group's results change.
+     */
+    val qualifyingThirdPlaceIds: StateFlow<Set<String>> =
+        groupRepository.getQualifyingThirdPlaceTeamIds()
+            .stateIn(
+                scope        = viewModelScope,
+                started      = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptySet(),
+            )
+
     // ── Per-group live polling ───────────────────────────────────────────────
 
     private var groupPollingJob: Job? = null

@@ -1,14 +1,15 @@
 package com.example.worldcup.ui.screens.groups
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -29,6 +30,7 @@ import com.example.worldcup.data.model.GroupStanding
 
 // Column widths — keep header and data rows in sync
 private val W_POS  = 20.dp
+private val W_LIVE = 36.dp   // live badge column
 private val W_MP   = 26.dp
 private val W_WIN  = 26.dp
 private val W_DRW  = 26.dp
@@ -46,6 +48,7 @@ private fun countryCodeToFlagEmoji(code: String): String =
 fun GroupCard(
     groupId: String,
     standings: List<GroupStanding>,
+    qualifyingThirdPlaceIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier,
 ) {
     Card(
@@ -66,7 +69,6 @@ fun GroupCard(
             HorizontalDivider()
 
             if (standings.isEmpty()) {
-                // Placeholder while standings are loading or unavailable
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -80,22 +82,27 @@ fun GroupCard(
                     )
                 }
             } else {
+                val hasLiveTeam = standings.any { it.isLive }
+
                 // ── Header row ──────────────────────────────────────────────
                 StandingsRow(
-                    position   = "#",
-                    teamLabel  = "Team",
+                    position     = "#",
+                    teamLabel    = "Team",
                     mp = "MP", w = "W", d = "D", l = "L",
                     gf = "GF", ga = "GA", gd = "GD", pts = "Pts",
-                    isHeader   = true,
+                    isHeader     = true,
+                    showLiveCol  = hasLiveTeam,
                 )
 
                 HorizontalDivider()
 
                 // ── Data rows ───────────────────────────────────────────────
                 standings.forEachIndexed { index, s ->
+                    val qualifyingDirect = s.position <= 2
+                    val qualifyingThird  = s.position == 3 && s.team.id in qualifyingThirdPlaceIds
                     StandingsRow(
-                        position  = s.position.toString(),
-                        teamLabel = "${countryCodeToFlagEmoji(s.team.flag)}  ${s.team.name}",
+                        position         = s.position.toString(),
+                        teamLabel        = "${countryCodeToFlagEmoji(s.team.flag)}  ${s.team.name}",
                         mp  = s.played.toString(),
                         w   = s.won.toString(),
                         d   = s.drawn.toString(),
@@ -104,10 +111,16 @@ fun GroupCard(
                         ga  = s.goalsAgainst.toString(),
                         gd  = formatGd(s.goalDifference),
                         pts = s.points.toString(),
-                        gdColor = gdColor(s.goalDifference),
-                        ptsWeight = FontWeight.Bold,
+                        gdColor          = gdColor(s.goalDifference),
+                        ptsWeight        = FontWeight.Bold,
+                        isLive           = s.isLive,
+                        showLiveCol      = hasLiveTeam,
+                        qualifyingDirect = qualifyingDirect,
+                        qualifyingThird  = qualifyingThird,
                     )
-                    if (index < standings.lastIndex) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    if (index < standings.lastIndex) {
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    }
                 }
             }
         }
@@ -120,35 +133,74 @@ private fun StandingsRow(
     teamLabel: String,
     mp: String, w: String, d: String, l: String,
     gf: String, ga: String, gd: String, pts: String,
-    isHeader: Boolean = false,
-    gdColor: Color = Color.Unspecified,
-    ptsWeight: FontWeight = FontWeight.Normal,
+    isHeader: Boolean         = false,
+    isLive: Boolean           = false,
+    showLiveCol: Boolean      = false,
+    qualifyingDirect: Boolean = false,
+    qualifyingThird: Boolean  = false,
+    gdColor: Color            = Color.Unspecified,
+    ptsWeight: FontWeight     = FontWeight.Normal,
 ) {
-    val textColor = if (isHeader)
-        MaterialTheme.colorScheme.onSurfaceVariant
-    else
-        MaterialTheme.colorScheme.onSurface
+    val greenBackground  = Color(0xFF2E7D32).copy(alpha = 0.18f)
+    val yellowBackground = Color(0xFFF9A825).copy(alpha = 0.20f)
+    val textColor = if (isHeader) MaterialTheme.colorScheme.onSurfaceVariant
+                   else MaterialTheme.colorScheme.onSurface
+
+    val rowBackground = when {
+        qualifyingDirect -> greenBackground
+        qualifyingThird  -> yellowBackground
+        else             -> Color.Transparent
+    }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .background(rowBackground)
             .padding(horizontal = 12.dp, vertical = if (isHeader) 6.dp else 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        // Position
         Cell(position, W_POS, color = textColor, align = TextAlign.Center)
         Spacer(Modifier.width(6.dp))
 
+        // Team name (bold when live)
         Text(
             text = teamLabel,
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.bodySmall,
             fontSize = 12.sp,
             color = textColor,
+            fontWeight = if (isLive) FontWeight.Bold else FontWeight.Normal,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.width(4.dp))
 
+        // Live badge column — only occupies space when at least one team in the group is live
+        if (showLiveCol) {
+            Box(
+                modifier = Modifier.width(W_LIVE),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (isLive) {
+                    Text(
+                        text = "LIVE",
+                        modifier = Modifier
+                            .background(
+                                color = MaterialTheme.colorScheme.error,
+                                shape = RoundedCornerShape(3.dp),
+                            )
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                        color = MaterialTheme.colorScheme.onError,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                    )
+                }
+            }
+        }
+
+        // Stat columns
         Cell(mp,  W_MP,  color = textColor)
         Cell(w,   W_WIN, color = textColor)
         Cell(d,   W_DRW, color = textColor)
@@ -181,13 +233,13 @@ private fun Cell(
 }
 
 private fun formatGd(gd: Int): String = when {
-    gd > 0  -> "+$gd"
-    else    -> gd.toString()
+    gd > 0 -> "+$gd"
+    else   -> gd.toString()
 }
 
 @Composable
 private fun gdColor(gd: Int): Color = when {
-    gd > 0  -> Color(0xFF2E7D32)
-    gd < 0  -> MaterialTheme.colorScheme.error
-    else    -> MaterialTheme.colorScheme.onSurfaceVariant
+    gd > 0 -> Color(0xFF2E7D32)
+    gd < 0 -> MaterialTheme.colorScheme.error
+    else   -> MaterialTheme.colorScheme.onSurfaceVariant
 }

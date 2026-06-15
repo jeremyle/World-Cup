@@ -11,4 +11,5 @@ data class GroupStanding(
     val goalsAgainst: Int,
     val goalDifference: Int,
     val points: Int,
+    val isLive: Boolean = false,
 )
