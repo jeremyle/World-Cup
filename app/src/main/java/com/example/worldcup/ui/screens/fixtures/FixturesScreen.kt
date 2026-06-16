@@ -1,7 +1,10 @@
 package com.example.worldcup.ui.screens.fixtures
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -117,16 +120,19 @@ fun FixturesScreen(
             ) { index ->
                 when (val item = items[index]) {
                     is FixtureItem.Header -> {
-                        Text(
-                            text = item.date.formatted(),
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(
-                                start = 16.dp, end = 16.dp,
-                                top = 20.dp, bottom = 8.dp,
-                            ),
-                        )
+                        Column {
+                            Text(
+                                text = item.date.formatted(),
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                            )
+                            Spacer(Modifier.height(10.dp))
+                        }
                     }
                     is FixtureItem.MatchRow -> {
                         MatchCard(
