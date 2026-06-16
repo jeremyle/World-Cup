@@ -1,5 +1,6 @@
 package com.example.worldcup.ui.screens.fixtures
 
+import com.example.worldcup.ui.util.PredictiveBackContainer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -80,6 +81,7 @@ fun FixturesScreen(
         if (index >= 0) listState.scrollToItem(index)
     }
 
+    PredictiveBackContainer(onBack = onBack) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -146,4 +148,5 @@ fun FixturesScreen(
             item { Spacer(Modifier.height(16.dp)) }
         }
     }
+    } // PredictiveBackContainer
 }

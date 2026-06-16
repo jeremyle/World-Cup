@@ -34,6 +34,11 @@ android {
             "FOOTBALL_DATA_API_KEY",
             "\"${localProps.getProperty("FOOTBALL_DATA_API_KEY", "")}\""
         )
+        buildConfigField(
+            "String",
+            "API_FOOTBALL_KEY",
+            "\"${localProps.getProperty("API_FOOTBALL_KEY", "")}\""
+        )
     }
 
     buildTypes {
@@ -84,6 +89,9 @@ dependencies {
     implementation(libs.retrofit)
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp.logging)
+
+    // Image loading
+    implementation(libs.coil.compose)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)

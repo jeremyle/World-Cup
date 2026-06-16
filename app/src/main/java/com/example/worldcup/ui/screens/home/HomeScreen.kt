@@ -42,20 +42,19 @@ import kotlinx.datetime.todayIn
 
 @Composable
 fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
-    var showAllGroups  by remember { mutableStateOf(false) }
-    var showFixtures   by remember { mutableStateOf(false) }
+    var showAllGroups by remember { mutableStateOf(false) }
+    var showFixtures  by remember { mutableStateOf(false) }
 
-    val matches by viewModel.todaysMatches.collectAsState()
+    val matches                 by viewModel.todaysMatches.collectAsState()
     val qualifyingThirdPlaceIds by viewModel.qualifyingThirdPlaceIds.collectAsState()
+    val topScorers by viewModel.topScorers.collectAsState()
     val pagerState = rememberPagerState(pageCount = { matches.size })
     val selectedDate = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
 
-    // Derive the match and group currently visible in the pager
     val currentMatch   = matches.getOrNull(pagerState.currentPage)
     val currentMatchId = currentMatch?.id
     val currentGroupId = currentMatch?.groupId
 
-    // Show overlay screens on top when requested
     if (showFixtures) {
         FixturesScreen(
             currentMatchId = currentMatchId,
@@ -73,12 +72,10 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
         return
     }
 
-    // Notify the ViewModel when the visible group changes so it can start/stop polling
     LaunchedEffect(currentGroupId) {
         viewModel.onGroupSelected(currentGroupId)
     }
 
-    // Reactively collect standings for the current group; switches automatically on swipe
     val groupStandings by produceState<List<GroupStanding>>(
         initialValue = emptyList(),
         key1 = currentGroupId,
@@ -102,13 +99,13 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
     ) { innerPadding ->
         if (matches.isEmpty()) {
             Box(
-                modifier = Modifier
+                modifier         = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "No matches today",
+                    text  = "No matches today",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -124,65 +121,68 @@ fun HomeScreen(viewModel: HomeScreenViewModel = viewModel()) {
                 Spacer(modifier = Modifier.height(16.dp))
 
                 DotIndicator(
-                    pageCount = matches.size,
+                    pageCount   = matches.size,
                     currentPage = pagerState.currentPage,
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // ── Match pager ───────────────────────────────────────────────
                 HorizontalPager(
-                    state = pagerState,
+                    state    = pagerState,
                     modifier = Modifier.fillMaxWidth(),
                 ) { page ->
                     Box(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier         = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
                         MatchCard(match = matches[page])
                     }
                 }
 
-                // ── View all fixtures pill ──────────────────────────────────
+                // ── View all fixtures pill ────────────────────────────────────
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = { showFixtures = true },
-                    shape = CircleShape,
-                    colors = ButtonDefaults.outlinedButtonColors(
+                    shape   = CircleShape,
+                    colors  = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.onSurface,
                     ),
                 ) {
-                    Text(
-                        text = "View all fixtures",
-                        style = MaterialTheme.typography.labelMedium,
-                    )
+                    Text(text = "View all fixtures", style = MaterialTheme.typography.labelMedium)
                 }
 
+                // ── Group standings card ──────────────────────────────────────
                 if (currentGroupId != null) {
                     Spacer(modifier = Modifier.height(20.dp))
                     GroupCard(
-                        groupId = currentGroupId,
-                        standings = groupStandings,
+                        groupId                 = currentGroupId,
+                        standings               = groupStandings,
                         qualifyingThirdPlaceIds = qualifyingThirdPlaceIds,
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier                = Modifier.padding(horizontal = 16.dp),
                     )
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // ── View all groups pill ────────────────────────────────
+                    // ── View all groups pill ──────────────────────────────────
                     OutlinedButton(
                         onClick = { showAllGroups = true },
-                        shape = CircleShape,
-                        colors = ButtonDefaults.outlinedButtonColors(
+                        shape   = CircleShape,
+                        colors  = ButtonDefaults.outlinedButtonColors(
                             contentColor = MaterialTheme.colorScheme.onSurface,
                         ),
                     ) {
-                        Text(
-                            text = "View all groups",
-                            style = MaterialTheme.typography.labelMedium,
-                        )
+                        Text(text = "View all groups", style = MaterialTheme.typography.labelMedium)
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
+
+                // ── Player stats pager ────────────────────────────────────────
+                Spacer(modifier = Modifier.height(20.dp))
+                PlayerStatsCard(
+                    topScorers = topScorers,
+                    modifier   = Modifier.padding(horizontal = 16.dp),
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

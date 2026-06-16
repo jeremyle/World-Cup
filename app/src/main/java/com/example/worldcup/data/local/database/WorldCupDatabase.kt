@@ -5,9 +5,11 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.worldcup.data.local.dao.MatchDao
+import com.example.worldcup.data.local.dao.PlayerStatDao
 import com.example.worldcup.data.local.dao.StadiumDao
 import com.example.worldcup.data.local.dao.TeamDao
 import com.example.worldcup.data.local.entity.MatchEntity
+import com.example.worldcup.data.local.entity.PlayerStatEntity
 import com.example.worldcup.data.local.entity.StadiumEntity
 import com.example.worldcup.data.local.entity.TeamEntity
 
@@ -16,8 +18,9 @@ import com.example.worldcup.data.local.entity.TeamEntity
         TeamEntity::class,
         StadiumEntity::class,
         MatchEntity::class,
+        PlayerStatEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class WorldCupDatabase : RoomDatabase() {
@@ -25,6 +28,7 @@ abstract class WorldCupDatabase : RoomDatabase() {
     abstract fun teamDao(): TeamDao
     abstract fun stadiumDao(): StadiumDao
     abstract fun matchDao(): MatchDao
+    abstract fun playerStatDao(): PlayerStatDao
 
     companion object {
         @Volatile private var INSTANCE: WorldCupDatabase? = null

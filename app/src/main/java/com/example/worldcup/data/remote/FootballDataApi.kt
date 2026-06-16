@@ -1,7 +1,9 @@
 package com.example.worldcup.data.remote
 
 import com.example.worldcup.data.remote.dto.MatchesResponse
+import com.example.worldcup.data.remote.dto.ScorersResponseDto
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface FootballDataApi {
@@ -19,4 +21,14 @@ interface FootballDataApi {
         @Query("dateFrom") dateFrom: String? = null,
         @Query("dateTo")   dateTo:   String? = null,
     ): MatchesResponse
+
+    /**
+     * Top scorers for a competition. Each entry includes goals and assists.
+     * Sorted by goals descending by default.
+     */
+    @GET("competitions/{id}/scorers")
+    suspend fun getScorers(
+        @Path("id")     competitionId: String = "WC",
+        @Query("limit") limit: Int = 20,
+    ): ScorersResponseDto
 }

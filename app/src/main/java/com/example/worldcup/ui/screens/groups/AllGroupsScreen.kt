@@ -1,5 +1,6 @@
 package com.example.worldcup.ui.screens.groups
 
+import com.example.worldcup.ui.util.PredictiveBackContainer
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -45,6 +46,7 @@ fun AllGroupsScreen(
         if (index >= 0) listState.scrollToItem(index)
     }
 
+    PredictiveBackContainer(onBack = onBack) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
@@ -93,4 +95,5 @@ fun AllGroupsScreen(
             }
         }
     }
+    } // PredictiveBackContainer
 }
