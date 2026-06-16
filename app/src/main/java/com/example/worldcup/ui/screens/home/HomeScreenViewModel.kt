@@ -35,6 +35,16 @@ class HomeScreenViewModel(app: Application) : AndroidViewModel(app) {
     private val matchRepository = MatchRepository(db.matchDao())
     private val groupRepository = GroupRepository(db.matchDao(), db.teamDao())
 
+    /** Reactive list of all matches ordered by kickoff time, driven by Room. */
+    val allMatches: StateFlow<List<Match>> =
+        db.matchDao().getAllMatchesWithTeams()
+            .map { list -> list.map { it.toDomain() } }
+            .stateIn(
+                scope        = viewModelScope,
+                started      = SharingStarted.WhileSubscribed(5_000),
+                initialValue = emptyList(),
+            )
+
     /** Reactive list of today's matches, driven by Room. */
     val todaysMatches: StateFlow<List<Match>> = run {
         val zone    = TimeZone.currentSystemDefault()
